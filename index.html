@@ -257,6 +257,7 @@
   "use strict";
   var APP_KEY = "accountingPastExamCenter_v1";
   var BACKUP_FORMAT = "기출문제 연습 센터 백업";
+  var BUILT_IN_PACK_URLS = ["https://park-hyojoon.github.io/accounting-past-exam-center/packs/105-past-exam-pack.json"];
   var circled = ["①","②","③","④"];
 
   var QUESTIONS = [
@@ -1923,6 +1924,22 @@
     }catch(e){showNotice("packNotice","기출문제 문제팩 추가 실패: "+e.message);}
   }
 
+  async function loadBuiltInPastExamPacks(){
+    var changed=false,map=new Map();
+    (state.importedPacks||[]).forEach(function(pack){map.set(Number(pack.examNo),pack);});
+    for(var i=0;i<BUILT_IN_PACK_URLS.length;i++){
+      try{
+        var response=await fetch(BUILT_IN_PACK_URLS[i],{cache:"no-cache"});
+        if(!response.ok)throw new Error("HTTP "+response.status);
+        var pack=normalizePastExamPack(await response.json(),"공개 내장 문제팩");
+        if(!map.has(Number(pack.examNo))){pack.importedAt=new Date().toISOString();map.set(Number(pack.examNo),pack);changed=true;}
+      }catch(e){console.warn("공개 내장 문제팩을 불러오지 못했습니다.",e);}
+    }
+    if(!changed)return;
+    state.importedPacks=Array.from(map.values()).sort(function(a,b){return Number(a.examNo)-Number(b.examNo);});
+    saveState();fillExamSelect(105);updateSetupSummary();updatePracticeResumeBanner();renderRecords();
+  }
+
   document.querySelectorAll(".nav button").forEach(function(btn){btn.addEventListener("click",function(){if(btn.dataset.view==="practiceView")goToPracticeHome();else switchView(btn.dataset.view);});});
   document.getElementById("homeTitle").addEventListener("click",goToPracticeHome);
   document.getElementById("startBtn").addEventListener("click",startFromSetup);
@@ -1951,7 +1968,7 @@
     var target=event.target;if(target&&(/^(TEXTAREA|INPUT|SELECT|BUTTON)$/.test(target.tagName))&&!(target.matches&&target.matches('input[type="radio"]')))return;
     var q=questionById(session.ids[session.index]);if(!q||q.kind==="practical")return;event.preventDefault();saveMockAnswer(true);
   });
-  fillExamSelect();updateSetupSummary();updateDashboard();renderRecords();updatePausedExamBanner();updatePracticeResumeBanner();ensureTimerTick();resumeActiveExam();
+  fillExamSelect();updateSetupSummary();updateDashboard();renderRecords();updatePausedExamBanner();updatePracticeResumeBanner();ensureTimerTick();resumeActiveExam();loadBuiltInPastExamPacks();
 })();
 </script>
 </body>
